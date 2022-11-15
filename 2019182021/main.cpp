@@ -198,7 +198,6 @@ GLvoid drawScene()
 
 	glViewport(800, 600, 200, 200);
 	glDisable(GL_DEPTH_TEST);
-	//glEnable(GL_CULL_FACE);
 
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(topViewCamera));
 
@@ -318,6 +317,8 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	}
 	else if (key == 'r' && mountain::initAni)
 	{
+		if (STATE::makeMaze)
+			return;
 		STATE::makeMaze = true;
 		set_maze(mountainMaze, mountain_list);
 	}
@@ -327,7 +328,6 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 		if (STATE::mountain_animation == false)
 		{
 			for (int i = 0; i < mountain::cNum; ++i)
-
 				for (int j = 0; j < mountain::rNum; ++j)
 					mountain_list[i][j].set_height();
 		}
@@ -354,10 +354,76 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	{
 		STATE::quarter_view = false;
 	}
+	else if (key == 'c')
+	{
+		delete mainObject;
+		mountainMaze.ResetMaze();
+		mountain_list.clear();
+		mapFloor.reset();
+
+		std::cout << "가로입력(5~25):";
+		std::cin >> mountain::rNum;
+		std::cout << "세로입력(5~25):";
+		std::cin >> mountain::cNum;
+		if (mountain::rNum < 5 || mountain::rNum > 25)
+			mountain::rNum = 5;
+		if (mountain::cNum < 5 || mountain::cNum > 25)
+			mountain::cNum = 5;
+		mapFloor.set_floor(mountain::rNum, mountain::cNum);
+
+		mountainMaze.initialize((mountain::rNum + 1) / 2, (mountain::cNum + 1) / 2);
+		while (!maze::completeGenerate)
+			mountainMaze.generator();
+
+		mountain::length = mapFloor.get_length();
+		mountain::width = mapFloor.get_width();
+
+		mountain_list = std::vector<std::vector<mountain>>(mountain::cNum);
+		for (int i = 0; i < mountain::cNum; ++i)
+		{
+			for (int j = 0; j < mountain::rNum; ++j)
+			{
+				mountain_list[i].push_back(mountain(j, i));
+			}
+		}
+
+		mainObject = new move_obj();
+
+		STATE::perspective = true;;
+		STATE::mountain_animation = false;
+		STATE::makeMaze = false;
+		STATE::quarter_view = true;
+		STATE::dir[0] = false;
+		STATE::dir[1] = false;
+		STATE::dir[2] = false;
+		STATE::dir[3] = false;
+		mountain::initAni = false;
+
+		camera = glm::mat4(1.0f);
+		camera_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
+		camera_look = glm::vec3(0.0f, 0.0f, 0.0f);
+
+		cameraAngle = 0.0f;
+
+		topViewCamera = glm::mat4(1.0f);
+		tVCamra_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
+
+		camera = glm::lookAt(camera_eye, camera_look, glm::vec3(-1.0f, 1.0f, -1.0f));
+		topViewCamera = glm::lookAt(tVCamra_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+
+		projection = glm::mat4(1.0f);
+		projection = glm::perspective(glm::radians(90.0f), 1.0f, 50.0f, 2000.0f);
+
+	}
 }
 
 GLvoid spKeyEvent(int key, int x, int y)
 {
+	if (mainObject->get_dir().x == 10 && (key == GLUT_KEY_LEFT || key == GLUT_KEY_RIGHT) )
+		mainObject->set_dir(key);
+	if(mainObject->get_dir().y == 10 && (key == GLUT_KEY_UP || key == GLUT_KEY_DOWN))
+		mainObject->set_dir(key);
+
 	if (key == GLUT_KEY_LEFT && !STATE::dir[0])
 	{
 		STATE::dir[0] = true;
@@ -382,22 +448,22 @@ GLvoid spKeyEvent(int key, int x, int y)
 
 GLvoid spKeyUpEvent(int key, int x, int y)
 {
-	if (key == GLUT_KEY_LEFT && STATE::dir[0])
+	if (key == GLUT_KEY_LEFT && STATE::dir[0] && mainObject->get_dir().x != 10)
 	{
 		STATE::dir[0] = false;
 		mainObject->setDirection(key, false);
 	}
-	else if (key == GLUT_KEY_RIGHT && STATE::dir[1])
+	else if (key == GLUT_KEY_RIGHT && STATE::dir[1] && mainObject->get_dir().x != 10)
 	{
 		STATE::dir[1] = false;
 		mainObject->setDirection(key, false);
 	}
-	else if (key == GLUT_KEY_UP && STATE::dir[2])
+	else if (key == GLUT_KEY_UP && STATE::dir[2] && mainObject->get_dir().y != 10)
 	{
 		STATE::dir[2] = false;
 		mainObject->setDirection(key, false);
 	}
-	else if (key == GLUT_KEY_DOWN && STATE::dir[3])
+	else if (key == GLUT_KEY_DOWN && STATE::dir[3] && mainObject->get_dir().y != 10)
 	{
 		STATE::dir[3] = false;
 		mainObject->setDirection(key, false);

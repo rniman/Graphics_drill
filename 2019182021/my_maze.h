@@ -166,13 +166,14 @@ public:
 		}
 	}
 
-	void ResetMaze(const int& x,const int& y) {
+	void ResetMaze() {
 		if (reset) return;
 		while (!tileStack.empty()) {
 			tileStack.pop();
 		}
-		initialize(x, y);
-
+		Maze.clear();
+		visitedCellCount = 1;
+		maze::completeGenerate = false;
 		reset = true;
 	}
 };
@@ -206,6 +207,8 @@ void maze::initialize(const int& w, const int& l)
 	
 	//일단 보류
 	curTile = &Maze[0][0];
+
+	reset = false;
 }
 
 void maze::generator()

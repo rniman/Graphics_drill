@@ -34,6 +34,12 @@ public:
 	GLfloat get_width() const { return width; }
 	GLfloat get_length() const { return length; }
 
+	GLvoid reset()
+	{
+		row_num = 0;
+		col_num = 0;
+		transformation = glm::mat4(1.0f);
+	}
 };
 
 GLvoid map_floor::set_floor(const int& i_row, const int& i_col)

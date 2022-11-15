@@ -32,7 +32,7 @@ public:
 		oldPos = pos;
 		speed = 7.0f;
 		state = false;
-		direction = glm::vec2(0.0f, 0.0f);
+		direction = glm::vec2(10.0f, 10.0f);
 		look = glm::vec3(0.0f, 0.0f, 1.0f);
 
 		vertex = std::vector<GLfloat>(108);
@@ -62,6 +62,7 @@ public:
 
 
 	}
+	GLvoid set_dir(int key);
 	GLvoid setDirection(int key, GLboolean down);
 	GLvoid set_speed(const GLfloat& delta);
 
@@ -69,11 +70,22 @@ public:
 	GLfloat get_speed() const { return speed; }
 	glm::vec3 get_look() const { return look; }
 	glm::mat4 get_camera() const { return camera; }
+	glm::vec2 get_dir() const { return direction; }
+
 
 	GLvoid draw(unsigned int& modelLocation);
 	GLvoid reveal();
 	GLvoid move();
 };
+
+GLvoid move_obj::set_dir(int key)
+{
+	if (key == GLUT_KEY_LEFT || key == GLUT_KEY_RIGHT)
+		direction.x = 0;
+
+	if (key == GLUT_KEY_UP || (key == GLUT_KEY_DOWN))
+		direction.y = 0;
+}
 
 GLvoid move_obj::setDirection(int key, GLboolean down)
 {
@@ -138,8 +150,10 @@ GLvoid move_obj::reveal()
 GLvoid move_obj::move()
 {
 	oldPos = pos;
-	pos.x += direction.x * speed;
-	pos.z += direction.y * speed;
+	if(direction.x != 10.0f)
+		pos.x += direction.x * speed;
+	if(direction.y != 10.0f)
+		pos.z += direction.y * speed;
 	camera_eye = glm::vec3(pos.x, pos.y+ 20.0f, pos.z + mountain::width / 4);
 
 	glm::vec3 temp(0.0f, 0.0f, 1.0f);
