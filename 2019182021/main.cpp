@@ -265,7 +265,6 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	}
 	else if (key == 'r' && mountain::initAni)
 	{
-		std::cout << 'z';
 		STATE::makeMaze = true;
 		set_maze(m, mountain_list);
 	}

@@ -155,7 +155,6 @@ GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mo
 				mountainList[i][j].maze_state = false;
 			else
 				mountainList[i][j].maze_state = true;
-
 		}
 	}
 
@@ -177,4 +176,12 @@ GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mo
 				mountainList[i * 2][j * 2 - 1].maze_state = true;
 		}
 	}
+
+	mountainList[mountain::cNum - 1][mountain::rNum - 1].maze_state = true;
+
+	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[0];
+	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[2];
+	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[1];
+	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[3];
+	//왼쪽 top 아래 left 위 right 오른쪽 bottom
 }
