@@ -76,7 +76,7 @@ public:
 	GLvoid init_animation();
 	GLvoid animation();
 	friend GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mountainList);
-
+	GLvoid set_height();
 };
 
 GLfloat mountain::width = 0.0f;
@@ -88,7 +88,6 @@ GLint mountain::cNum = 0;
 
 GLvoid mountain::draw(unsigned int& modelLocation)
 {
-
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(transformation));
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, vertex.size() / 3);
@@ -177,11 +176,44 @@ GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mo
 		}
 	}
 
+	//마지막 탈출방
 	mountainList[mountain::cNum - 1][mountain::rNum - 1].maze_state = true;
+	
+	if (mountain::cNum % 2 == 0 && mountain::rNum % 2 == 0)
+	{
+		std::uniform_int_distribution<int> dis(0, 1);
 
-	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[0];
-	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[2];
-	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[1];
-	//std::cout << completeMaze.Maze[(mountain::cNum + 1) / 2 - 1][(mountain::rNum + 1) / 2 - 1].wallOpen[3];
-	//왼쪽 top 아래 left 위 right 오른쪽 bottom
+		if (dis(gen) == 0) //마지막 top이 열림
+			mountainList[mountain::cNum - 2][mountain::rNum - 1].maze_state = true;
+		else
+			mountainList[mountain::cNum - 1][mountain::rNum - 2].maze_state = true;
+	}
+	
+	if (mountain::cNum % 2 == 0)
+	{
+		std::uniform_int_distribution<int> dis(1, mountain::rNum - 4);
+		int random_loop = dis(gen);
+		for (int i = 0; i < random_loop; ++i)
+			mountainList[mountain::cNum - 1][dis(gen)].maze_state = true;
+	}
+	
+	if (mountain::rNum % 2 == 0)
+	{
+		std::uniform_int_distribution<int> dis(1, mountain::cNum - 4);
+		int random_loop = dis(gen);
+		for (int i = 0; i < random_loop; ++i)
+			mountainList[dis(gen)][mountain::rNum - 1].maze_state = true;
+
+	}
+}
+
+GLvoid mountain::set_height()
+{
+	if (!maze_state)
+	{
+		transformation = glm::mat4(1.0f);
+		transformation = glm::translate(transformation,
+			glm::vec3((-500.0f + mountain::width / 2) + mountain::width * index_r, max_height * 0.2f, (-500.0f + mountain::length / 2) + mountain::length * index_c));
+		transformation = glm::scale(transformation, glm::vec3(1.0f, 0.2f, 1.0f));
+	}
 }

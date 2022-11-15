@@ -22,10 +22,9 @@
     <ClInclude Include="axes.h" />
     <ClInclude Include="cuboid.h" />
     <ClInclude Include="floor.h" />
+    <ClInclude Include="move_obj.h" />
     <ClInclude Include="my_maze.h" />
     <ClInclude Include="make_Shader.h" />
-    <ClInclude Include="elder_maze.h" />
-    <ClInclude Include="maze.h" />
     <ClInclude Include="mountain.h" />
     <ClInclude Include="read_Obj.h" />
   </ItemGroup>
@@ -35,7 +34,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="maze.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

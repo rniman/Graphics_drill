@@ -7,8 +7,8 @@ class map_floor
 
 private:
 	int row_num, col_num;
-	std::vector<GLfloat> vertex;
-	std::vector<GLfloat> color;
+	std::vector<GLfloat> vertex = std::vector<GLfloat>(108);
+	std::vector<GLfloat> color = std::vector<GLfloat>(108);
 	glm::mat4 transformation;
 
 	GLfloat width, length;
@@ -19,8 +19,9 @@ public:
 	{
 		set_vertex();
 		set_color();
+		transformation = glm::mat4(1.0f);
 	}
-
+	 
 	GLvoid set_floor(const int& i_width, const int& i_height);
 	GLvoid set_vertex();
 	GLvoid set_color();

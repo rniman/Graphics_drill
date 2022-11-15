@@ -4,14 +4,18 @@
 #include "cuboid.h"
 #include "floor.h"
 #include "mountain.h"
-//#include "maze.h"
+#include "move_obj.h"
 #include "my_maze.h"
+
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
 GLvoid TimeEvent(int value);
 GLvoid KeyEvent(unsigned char key, int x, int y);
 GLvoid KeyUpEvent(unsigned char key, int x, int y);
+
+GLvoid spKeyEvent(int key, int x, int y);
+GLvoid spKeyUpEvent(int key, int x, int y);
 GLvoid MouseClick();
 GLvoid MouseMove();
 
@@ -22,12 +26,16 @@ GLvoid convert_WindowXY_OpenglXY(const int& x, const int& y, float& ox, float& o
 
 const GLint window_w = 1000, window_h = 800;
 GLfloat rColor = 0.0f, gColor = 0.0f, bColor = 0.0f;
+GLfloat tv_rColor = 1.0f, tv_gColor = 1.0f, tv_bColor = 1.0f;
+
 
 namespace STATE
 {
 	GLboolean perspective = true;;
 	GLboolean mountain_animation = false;
 	GLboolean makeMaze = false;
+	GLboolean dir[4] = { false, false, false, false };
+	GLboolean quarter_view = true;
 }
 
 
@@ -36,8 +44,8 @@ unsigned int viewLocation;
 unsigned int projLocation;
 
 glm::mat4 camera;
-//glm::vec3 camera_eye = glm::vec3(700.0f,900.0f,700.0f);
 glm::vec3 camera_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
+glm::vec3 camera_look = glm::vec3(0.0f, 0.0f, 0.0f);
 
 GLfloat cameraAngle = 0.0f;
 
@@ -57,7 +65,9 @@ GLuint vbo_floor[2];
 
 std::vector<std::vector<mountain>> mountain_list;
 
-maze m;
+maze mountainMaze;
+
+move_obj* mainObject;
 
 int main(int argc, char** argv)
 {
@@ -80,9 +90,9 @@ int main(int argc, char** argv)
 		mountain::cNum = 5;
 	mapFloor.set_floor(mountain::rNum, mountain::cNum);
 
-	m.initialize((mountain::rNum + 1) / 2, (mountain::cNum + 1) / 2);
+	mountainMaze.initialize((mountain::rNum + 1) / 2, (mountain::cNum + 1) / 2);
 	while(!maze::completeGenerate)
-		m.generator();
+		mountainMaze.generator();
 
 
 	mountain::length = mapFloor.get_length();
@@ -97,7 +107,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-
+	mainObject = new move_obj();
 
 	//세이더 읽어와서 세이더 프로그램 만들기
 	shaderID = make_shaderProgram();	//세이더 프로그램 만들기
@@ -107,7 +117,9 @@ int main(int argc, char** argv)
 	glutReshapeFunc(Reshape);
 	glutTimerFunc(100, TimeEvent, 0);
 	glutKeyboardFunc(KeyEvent);
+	glutSpecialFunc(spKeyEvent);
 	glutKeyboardUpFunc(KeyUpEvent);
+	glutSpecialUpFunc(spKeyUpEvent);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -117,8 +129,8 @@ int main(int argc, char** argv)
 	viewLocation = glGetUniformLocation(shaderID, "viewTransform");
 	projLocation = glGetUniformLocation(shaderID, "projectionTransform");
 
-	camera = glm::lookAt(camera_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	topViewCamera = glm::lookAt(tVCamra_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	camera = glm::lookAt(camera_eye, camera_look, glm::vec3(-1.0f, 1.0f, -1.0f));
+	topViewCamera = glm::lookAt(tVCamra_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 	
 	projection = glm::mat4(1.0f);
 	//근평면은 포함이고 원평면은 포함X
@@ -131,6 +143,9 @@ int main(int argc, char** argv)
 
 GLvoid drawScene()
 {
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	//glDisable(GL_SCISSOR_TEST);
 	glClearColor(rColor, gColor, bColor, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -140,7 +155,10 @@ GLvoid drawScene()
 	glViewport(0, 0, window_w, window_h);
 
 	//카메라 변환 적용
-	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera));
+	if (STATE::quarter_view)
+		glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera));
+	else
+		glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(mainObject->get_camera()));
 
 	//투영 변환 적용
 	glUniformMatrix4fv(projLocation, 1, GL_FALSE, glm::value_ptr(projection));
@@ -155,9 +173,7 @@ GLvoid drawScene()
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, mapFloor.get_ptr_transformation());
 	glBindVertexArray(vao_floor);
 	glDrawArrays(GL_TRIANGLES, 0, mapFloor.get_vertex().size() / 3);
-	
-
-	
+		
 	if (STATE::makeMaze)
 	{
 		for (int i = 0; i < mountain::cNum; ++i)
@@ -173,10 +189,28 @@ GLvoid drawScene()
 			for (int j = 0; j < mountain::rNum; ++j)
 				mountain_list[i][j].draw(modelLocation);
 		}
+	}
+
+	if (mainObject->get_state())
+	{
+		mainObject->draw(modelLocation);
 	}
 
 	glViewport(800, 600, 200, 200);
+	glDisable(GL_DEPTH_TEST);
+	//glEnable(GL_CULL_FACE);
+
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(topViewCamera));
+
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, mapFloor.get_ptr_transformation());
+	glBindVertexArray(vao_floor);
+	glDrawArrays(GL_TRIANGLES, 0, mapFloor.get_vertex().size() / 3);
+
+	if (mainObject->get_state())
+	{
+		mainObject->draw(modelLocation);
+	}
+
 	if (STATE::makeMaze)
 	{
 		for (int i = 0; i < mountain::cNum; ++i)
@@ -193,6 +227,7 @@ GLvoid drawScene()
 				mountain_list[i][j].draw(modelLocation);
 		}
 	}
+
 
 	glutSwapBuffers();
 }
@@ -206,7 +241,7 @@ GLvoid Reshape(int w, int h)
 GLvoid TimeEvent(int value)
 {
 	camera = glm::mat4(1.0f);
-	camera = glm::lookAt(camera_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	camera = glm::lookAt(camera_eye, camera_look, glm::vec3(0.0f, 0.0f, -1.0f));
 	camera = glm::rotate(camera, glm::radians(cameraAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	if (!mountain::initAni)
@@ -226,6 +261,7 @@ GLvoid TimeEvent(int value)
 		}
 	}
 	
+	mainObject->move();
 
 	glutPostRedisplay();
 	glutTimerFunc(100, TimeEvent, 0);
@@ -234,7 +270,10 @@ GLvoid TimeEvent(int value)
 GLvoid KeyEvent(unsigned char key, int x, int y)
 {
 	if (key == 'q')
+	{
+		delete mainObject;
 		glutExit();
+	}
 	else if (key == 'y')
 	{
 		cameraAngle += 10.0f;
@@ -242,6 +281,20 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	else if (key == 'Y')
 	{
 		cameraAngle -= 10.0f;
+	}
+	else if (key == 'z')
+	{
+		if (!STATE::perspective)
+			return;
+		camera_eye.z += 10.0f;
+		camera_look.z += 10.0f;
+	}
+	else if (key == 'Z')
+	{
+		if (!STATE::perspective)
+			return;
+		camera_eye.z -= 10.0f;
+		camera_look.z -= 10.0f;
 	}
 	else if (key == 'm')
 	{
@@ -266,9 +319,91 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	else if (key == 'r' && mountain::initAni)
 	{
 		STATE::makeMaze = true;
-		set_maze(m, mountain_list);
+		set_maze(mountainMaze, mountain_list);
+	}
+	else if (key == 'v')
+	{
+		STATE::mountain_animation = STATE::mountain_animation ? false : true;
+		if (STATE::mountain_animation == false)
+		{
+			for (int i = 0; i < mountain::cNum; ++i)
+
+				for (int j = 0; j < mountain::rNum; ++j)
+					mountain_list[i][j].set_height();
+		}
+	}
+	else if (key == '+')
+	{
+		if (mainObject->get_speed() < 15.0f)
+			mainObject->set_speed(1.0f);
+	}
+	else if (key == '-')
+	{
+		if (mainObject->get_speed() > 5.0f)
+			mainObject->set_speed(-1.0f);
+	}
+	else if (key == 's' && STATE::makeMaze)
+	{
+		mainObject->reveal();
+	}
+	else if (key == '3')
+	{
+		STATE::quarter_view = true;
+	}
+	else if (key == '1')
+	{
+		STATE::quarter_view = false;
 	}
 }
+
+GLvoid spKeyEvent(int key, int x, int y)
+{
+	if (key == GLUT_KEY_LEFT && !STATE::dir[0])
+	{
+		STATE::dir[0] = true;
+		mainObject->setDirection(key, true);
+	}
+	else if (key == GLUT_KEY_RIGHT && !STATE::dir[1])
+	{
+		STATE::dir[1] = true;
+		mainObject->setDirection(key, true);
+	}
+	else if (key == GLUT_KEY_UP && !STATE::dir[2])
+	{
+		STATE::dir[2] = true;
+		mainObject->setDirection(key, true);
+	}
+	else if (key == GLUT_KEY_DOWN && !STATE::dir[3])
+	{
+		STATE::dir[3] = true;
+		mainObject->setDirection(key, true);
+	}
+}
+
+GLvoid spKeyUpEvent(int key, int x, int y)
+{
+	if (key == GLUT_KEY_LEFT && STATE::dir[0])
+	{
+		STATE::dir[0] = false;
+		mainObject->setDirection(key, false);
+	}
+	else if (key == GLUT_KEY_RIGHT && STATE::dir[1])
+	{
+		STATE::dir[1] = false;
+		mainObject->setDirection(key, false);
+	}
+	else if (key == GLUT_KEY_UP && STATE::dir[2])
+	{
+		STATE::dir[2] = false;
+		mainObject->setDirection(key, false);
+	}
+	else if (key == GLUT_KEY_DOWN && STATE::dir[3])
+	{
+		STATE::dir[3] = false;
+		mainObject->setDirection(key, false);
+	}
+}
+
 
 GLvoid KeyUpEvent(unsigned char key, int x, int y)
 {
