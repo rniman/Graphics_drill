@@ -1,10 +1,7 @@
 #pragma once
 #include "make_Shader.h"
 #include "cuboid.h"
-//#include <random>
-//
-//std::random_device rd;
-//std::mt19937 gen(rd);
+#include "my_maze.h"
 
 class mountain
 {
@@ -16,18 +13,21 @@ private:
 	std::vector<GLfloat> color = std::vector<GLfloat>(108);;
 	glm::mat4 transformation;
 	
-	GLfloat index_r;
-	GLfloat index_c;
+	GLint index_r;
+	GLint index_c;
 	GLfloat max_height;
 	GLfloat speed;
 	GLfloat now_height;
 	GLboolean state_up;
 
 public:
+	GLboolean maze_state;
+
 	static GLfloat width;
 	static GLfloat length;
 	static GLboolean initAni;
-
+	static GLint rNum;
+	static GLint cNum;
 
 	mountain(const GLint& r, const GLint& c)
 	{
@@ -40,6 +40,8 @@ public:
 
 		index_r = r;
 		index_c = c;
+		//true라면 미로의 길이다 즉 바닥으로 변한다
+		maze_state = false;
 
 		makeCuboid(vertex, mountain::width / 2, mountain::length / 2, max_height);
 
@@ -70,21 +72,37 @@ public:
 	}
 
 	GLvoid draw(unsigned int& modelLocation);
+	GLvoid drawMaze(unsigned int& modelLocation);
 	GLvoid init_animation();
 	GLvoid animation();
+	friend GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mountainList);
+
 };
 
 GLfloat mountain::width = 0.0f;
 GLfloat mountain::length = 0.0f;
 GLboolean mountain::initAni = false;
+GLint mountain::rNum = 0;
+GLint mountain::cNum = 0;
 
 
 GLvoid mountain::draw(unsigned int& modelLocation)
 {
+
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(transformation));
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, vertex.size() / 3);
 }
+
+GLvoid mountain::drawMaze(unsigned int& modelLocation)
+{
+	if (maze_state)
+		return;
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(transformation));
+	glBindVertexArray(vao);
+	glDrawArrays(GL_TRIANGLES, 0, vertex.size() / 3);
+}
+
 
 GLvoid mountain::init_animation()
 {
@@ -125,4 +143,38 @@ GLvoid mountain::animation()
 	transformation = glm::translate(transformation,
 		glm::vec3((-500.0f + mountain::width / 2) + mountain::width * index_r, max_height * now_height, (-500.0f + mountain::length / 2) + mountain::length * index_c));
 	transformation = glm::scale(transformation, glm::vec3(1.0f, now_height, 1.0f));
+}
+
+GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mountainList)
+{
+	for (int i = 0; i < mountain::cNum; ++i)
+	{
+		for (int j = 0; j < mountain::rNum; ++j)
+		{
+			if (i % 2 == 1 || j % 2 == 1)
+				mountainList[i][j].maze_state = false;
+			else
+				mountainList[i][j].maze_state = true;
+
+		}
+	}
+
+	for (int i = 0; i < (mountain::cNum + 1) / 2; ++i)
+	{
+		for (int j = 0; j < (mountain::rNum + 1) / 2; ++j)
+		{			
+			//0 top  1 right  2 bottom  3 left
+			if(!completeMaze.Maze[i][j].wallOpen[0])
+				mountainList[i * 2 - 1][j * 2].maze_state = true;
+			
+			if (!completeMaze.Maze[i][j].wallOpen[1])
+				mountainList[i * 2][j * 2 + 1].maze_state = true;
+			
+			if (!completeMaze.Maze[i][j].wallOpen[2])
+				mountainList[i * 2 + 1][j * 2].maze_state = true;
+			
+			if (!completeMaze.Maze[i][j].wallOpen[3])
+				mountainList[i * 2][j * 2 - 1].maze_state = true;
+		}
+	}
 }

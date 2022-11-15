@@ -22,6 +22,7 @@
     <ClInclude Include="axes.h" />
     <ClInclude Include="cuboid.h" />
     <ClInclude Include="floor.h" />
+    <ClInclude Include="my_maze.h" />
     <ClInclude Include="make_Shader.h" />
     <ClInclude Include="elder_maze.h" />
     <ClInclude Include="maze.h" />

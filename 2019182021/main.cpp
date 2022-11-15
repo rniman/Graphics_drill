@@ -4,8 +4,8 @@
 #include "cuboid.h"
 #include "floor.h"
 #include "mountain.h"
-#include "maze.h"
-
+//#include "maze.h"
+#include "my_maze.h"
 
 GLvoid drawScene();
 GLvoid Reshape(int w, int h);
@@ -27,6 +27,7 @@ namespace STATE
 {
 	GLboolean perspective = true;;
 	GLboolean mountain_animation = false;
+	GLboolean makeMaze = false;
 }
 
 
@@ -35,7 +36,9 @@ unsigned int viewLocation;
 unsigned int projLocation;
 
 glm::mat4 camera;
-glm::vec3 camera_eye = glm::vec3(700.0f,900.0f,700.0f);
+//glm::vec3 camera_eye = glm::vec3(700.0f,900.0f,700.0f);
+glm::vec3 camera_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
+
 GLfloat cameraAngle = 0.0f;
 
 glm::mat4 topViewCamera;
@@ -52,7 +55,9 @@ map_floor mapFloor;
 GLuint vao_floor;
 GLuint vbo_floor[2];
 
-std::vector<mountain> mountain_list;
+std::vector<std::vector<mountain>> mountain_list;
+
+maze m;
 
 int main(int argc, char** argv)
 {
@@ -65,41 +70,30 @@ int main(int argc, char** argv)
 	glewExperimental = GL_TRUE;
 	glewInit();
 
-	std::cin >> input;
-	init();
-	for (int i = 0; i < input - 1; i++) 
-	{
-		set_row();
-		rnd_union();
-		group_down();
-
-		cur_col++;
-	}
-
-	set_row();
-	last_line();
-
-	print_maze();
-
-	int r, c;
 	std::cout << "가로입력(5~25):";
-	std::cin >> r;
+	std::cin >> mountain::rNum;
 	std::cout << "세로입력(5~25):";
-	std::cin >> c;
-	if (r < 5 || r > 25)
-		r = 5;
-	if (c < 5 || c > 25)
-		c = 5;
-	mapFloor.set_floor(r, c);
+	std::cin >> mountain::cNum;
+	if (mountain::rNum < 5 || mountain::rNum > 25)
+		mountain::rNum = 5;
+	if (mountain::cNum < 5 || mountain::cNum > 25)
+		mountain::cNum = 5;
+	mapFloor.set_floor(mountain::rNum, mountain::cNum);
+
+	m.initialize((mountain::rNum + 1) / 2, (mountain::cNum + 1) / 2);
+	while(!maze::completeGenerate)
+		m.generator();
+
 
 	mountain::length = mapFloor.get_length();
 	mountain::width = mapFloor.get_width();
 
-	for (int i = 0; i < c; ++i)
-	{
-		for (int j = 0; j < r; ++j)
+	mountain_list = std::vector<std::vector<mountain>>(mountain::cNum);
+	for (int i = 0; i < mountain::cNum; ++i)
+	{		
+		for (int j = 0; j < mountain::rNum; ++j)
 		{
-			mountain_list.push_back(mountain(j, i));
+			mountain_list[i].push_back(mountain(j, i));
 		}
 	}
 
@@ -123,7 +117,7 @@ int main(int argc, char** argv)
 	viewLocation = glGetUniformLocation(shaderID, "viewTransform");
 	projLocation = glGetUniformLocation(shaderID, "projectionTransform");
 
-	camera = glm::lookAt(camera_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-0.1f, 0.1f, -0.1f));
+	camera = glm::lookAt(camera_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	topViewCamera = glm::lookAt(tVCamra_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	
 	projection = glm::mat4(1.0f);
@@ -162,17 +156,42 @@ GLvoid drawScene()
 	glBindVertexArray(vao_floor);
 	glDrawArrays(GL_TRIANGLES, 0, mapFloor.get_vertex().size() / 3);
 	
-	for (int i = 0; i < mountain_list.size(); ++i)
-	{
-		mountain_list[i].draw(modelLocation);
-	}
+
 	
+	if (STATE::makeMaze)
+	{
+		for (int i = 0; i < mountain::cNum; ++i)
+		{
+			for (int j = 0; j < mountain::rNum; ++j)
+				mountain_list[i][j].drawMaze(modelLocation);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < mountain::cNum; ++i)
+		{
+			for (int j = 0; j < mountain::rNum; ++j)
+				mountain_list[i][j].draw(modelLocation);
+		}
+	}
 
 	glViewport(800, 600, 200, 200);
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(topViewCamera));
-	for (int i = 0; i < mountain_list.size(); ++i)
+	if (STATE::makeMaze)
 	{
-		mountain_list[i].draw(modelLocation);
+		for (int i = 0; i < mountain::cNum; ++i)
+		{
+			for (int j = 0; j < mountain::rNum; ++j)
+				mountain_list[i][j].drawMaze(modelLocation);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < mountain::cNum; ++i)
+		{
+			for (int j = 0; j < mountain::rNum; ++j)
+				mountain_list[i][j].draw(modelLocation);
+		}
 	}
 
 	glutSwapBuffers();
@@ -187,23 +206,26 @@ GLvoid Reshape(int w, int h)
 GLvoid TimeEvent(int value)
 {
 	camera = glm::mat4(1.0f);
-	camera = glm::lookAt(camera_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	camera = glm::lookAt(camera_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	camera = glm::rotate(camera, glm::radians(cameraAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	if (!mountain::initAni)
 	{
-		for (int i = 0; i < mountain_list.size(); ++i)
+		for (int i = 0; i < mountain::cNum; ++i)
 		{
-			mountain_list[i].init_animation();
+			for (int j = 0; j < mountain::rNum; ++j)
+				mountain_list[i][j].init_animation();
 		}
 	}
 	else if(STATE::mountain_animation)
 	{
-		for (int i = 0; i < mountain_list.size(); ++i)
+		for (int i = 0; i < mountain::cNum; ++i)
 		{
-			mountain_list[i].animation();
+			for (int j = 0; j < mountain::rNum; ++j)
+				mountain_list[i][j].animation();
 		}
 	}
+	
 
 	glutPostRedisplay();
 	glutTimerFunc(100, TimeEvent, 0);
@@ -240,6 +262,12 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 		STATE::perspective = true;
 		projection = glm::mat4(1.0f);
 		projection = glm::perspective(glm::radians(90.0f), 1.0f, 50.0f, 2000.0f);
+	}
+	else if (key == 'r' && mountain::initAni)
+	{
+		std::cout << 'z';
+		STATE::makeMaze = true;
+		set_maze(m, mountain_list);
 	}
 }
 
