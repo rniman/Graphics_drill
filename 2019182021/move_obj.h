@@ -30,7 +30,7 @@ public:
 	{
 		pos = glm::vec3(-500.0f + mountain::width / 2, 10.0f, -500.0f + mountain::length / 2);
 		oldPos = pos;
-		speed = 7.0f;
+		speed = 10.0f;
 		state = false;
 		direction = glm::vec2(10.0f, 10.0f);
 		look = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -75,7 +75,8 @@ public:
 
 	GLvoid draw(unsigned int& modelLocation);
 	GLvoid reveal();
-	GLvoid move();
+	GLvoid move(const std::vector<std::vector<mountain>>& mountainList);
+	GLboolean collide(const mountain& mountain_obj);
 };
 
 GLvoid move_obj::set_dir(int key)
@@ -144,17 +145,30 @@ GLvoid move_obj::draw(unsigned int& modelLocation)
 
 GLvoid move_obj::reveal()
 {
-	state = state ? false : true;
+	state = true;
 }
 
-GLvoid move_obj::move()
+GLvoid move_obj::move(const std::vector<std::vector<mountain>>& mountainList)
 {
 	oldPos = pos;
 	if(direction.x != 10.0f)
 		pos.x += direction.x * speed;
 	if(direction.y != 10.0f)
 		pos.z += direction.y * speed;
-	camera_eye = glm::vec3(pos.x, pos.y+ 20.0f, pos.z + mountain::width / 4);
+
+	for (int i = 0; i < mountain::cNum; ++i)
+	{
+		for (int j = 0; j < mountain::rNum; ++j) 
+		{
+			if (collide(mountainList[i][j]))
+			{
+				pos.x = oldPos.x;
+				pos.z = oldPos.z;
+			}
+		}
+	}
+
+	camera_eye = glm::vec3(pos.x, pos.y, pos.z);
 
 	glm::vec3 temp(0.0f, 0.0f, 1.0f);
 	if (oldPos.x != pos.x || oldPos.z != pos.z)
@@ -171,4 +185,32 @@ GLvoid move_obj::move()
 
 	camera = glm::mat4(1.0f);
 	camera = glm::lookAt(camera_eye, camera_eye + look, glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+GLboolean move_obj::collide(const mountain& mountain_obj)
+{
+	//자신과 충돌체크
+	//만약 자신이 미로가 아니면 true리턴
+	GLfloat minX = -500.0f + mountain::width * mountain_obj.get_index_r();
+	GLfloat maxX = minX + mountain::width;
+	GLfloat minZ = -500.0f + mountain::length * mountain_obj.get_index_c();
+	GLfloat maxZ = minZ + mountain::length;
+	
+	if (pos.x - mountain::width / 4 < -500.0f || pos.x + mountain::width / 4 > 500.0f
+		|| pos.z - mountain::length / 4 < -500.0f || pos.z + mountain::width / 4 > 500.0f)
+		return true;
+
+	if (mountain_obj.maze_state)
+		return false;
+
+	if (pos.x - mountain::width / 4 > maxX)
+		return false;
+	if (pos.x + mountain::width / 4 < minX)
+		return false;
+	if (pos.z - mountain::length / 4 > maxZ)
+		return false;
+	if (pos.z + mountain::length / 4 < minZ)
+		return false;
+
+	return true;
 }

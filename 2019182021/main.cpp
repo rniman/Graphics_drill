@@ -24,7 +24,7 @@ void initBuffer();
 GLvoid convert_OpenglXY_WindowXY(int& x, int& y, const float& ox, const float& oy);
 GLvoid convert_WindowXY_OpenglXY(const int& x, const int& y, float& ox, float& oy);
 
-const GLint window_w = 1000, window_h = 800;
+const GLint window_w = 1000, window_h = 700;
 GLfloat rColor = 0.0f, gColor = 0.0f, bColor = 0.0f;
 GLfloat tv_rColor = 1.0f, tv_gColor = 1.0f, tv_bColor = 1.0f;
 
@@ -44,7 +44,7 @@ unsigned int viewLocation;
 unsigned int projLocation;
 
 glm::mat4 camera;
-glm::vec3 camera_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
+glm::vec3 camera_eye = glm::vec3(700.0f, 800.0f, 700.0f);
 glm::vec3 camera_look = glm::vec3(0.0f, 0.0f, 0.0f);
 
 GLfloat cameraAngle = 0.0f;
@@ -94,6 +94,18 @@ int main(int argc, char** argv)
 	while(!maze::completeGenerate)
 		mountainMaze.generator();
 
+	std::cout << "o/p: 직각투영/원근투영" << std::endl;
+	std::cout << "z/Z: 원근투영시 3인칭 카메라 z축이동" << std::endl;
+	std::cout << "m/M: 육면체 움직임/멈춘다" << std::endl;
+	std::cout << "y/Y: 3인칭 바깥 카메라가 y축 기준으로 회전" << std::endl;
+	std::cout << "r: 미로가 생성된다." << std::endl;
+	std::cout << "v: 육면체가 움직인다/ 움직임을 멈추고 일정높이만큼 낮아진다" << std::endl;
+	std::cout << "s: 객체가 나타난다" << std::endl;
+	std::cout << "방향키: 객체가 이동한다" << std::endl;
+	std::cout << "+/-: 육면체의 움직이는 속도 증가/감소" << std::endl;
+	std::cout << "1/3: 1인칭/3인칭" << std::endl;
+	std::cout << "c: 모든값 초기화" << std::endl;
+	std::cout << "q: 종료" << std::endl;
 
 	mountain::length = mapFloor.get_length();
 	mountain::width = mapFloor.get_width();
@@ -108,6 +120,8 @@ int main(int argc, char** argv)
 	}
 
 	mainObject = new move_obj();
+
+
 
 	//세이더 읽어와서 세이더 프로그램 만들기
 	shaderID = make_shaderProgram();	//세이더 프로그램 만들기
@@ -129,12 +143,12 @@ int main(int argc, char** argv)
 	viewLocation = glGetUniformLocation(shaderID, "viewTransform");
 	projLocation = glGetUniformLocation(shaderID, "projectionTransform");
 
-	camera = glm::lookAt(camera_eye, camera_look, glm::vec3(-1.0f, 1.0f, -1.0f));
+	camera = glm::lookAt(camera_eye, camera_look, glm::vec3(0.0f, 1.0f, 0.0f));
 	topViewCamera = glm::lookAt(tVCamra_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 	
 	projection = glm::mat4(1.0f);
 	//근평면은 포함이고 원평면은 포함X
-	projection = glm::perspective(glm::radians(90.0f), 1.0f, 50.0f, 3000.0f);
+	projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 3000.0f);
 
 
 	glutMainLoop();
@@ -145,7 +159,6 @@ GLvoid drawScene()
 {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-	//glDisable(GL_SCISSOR_TEST);
 	glClearColor(rColor, gColor, bColor, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -196,7 +209,7 @@ GLvoid drawScene()
 		mainObject->draw(modelLocation);
 	}
 
-	glViewport(800, 600, 200, 200);
+	glViewport(800, 500, 200, 200);
 	glDisable(GL_DEPTH_TEST);
 
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(topViewCamera));
@@ -227,7 +240,6 @@ GLvoid drawScene()
 		}
 	}
 
-
 	glutSwapBuffers();
 }
 
@@ -240,7 +252,7 @@ GLvoid Reshape(int w, int h)
 GLvoid TimeEvent(int value)
 {
 	camera = glm::mat4(1.0f);
-	camera = glm::lookAt(camera_eye, camera_look, glm::vec3(0.0f, 0.0f, -1.0f));
+	camera = glm::lookAt(camera_eye, camera_look, glm::vec3(0.0f, 1.0f, 0.0f));
 	camera = glm::rotate(camera, glm::radians(cameraAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	if (!mountain::initAni)
@@ -260,7 +272,8 @@ GLvoid TimeEvent(int value)
 		}
 	}
 	
-	mainObject->move();
+	
+	mainObject->move(mountain_list);
 
 	glutPostRedisplay();
 	glutTimerFunc(100, TimeEvent, 0);
@@ -307,13 +320,13 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	{
 		STATE::perspective = false;
 		projection = glm::mat4(1.0f);
-		projection = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, 50.0f, 2000.0f);
+		projection = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, 50.0f, 3000.0f);
 	}
 	else if (key == 'p')
 	{
 		STATE::perspective = true;
 		projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(90.0f), 1.0f, 50.0f, 2000.0f);
+		projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 3000.0f);
 	}
 	else if (key == 'r' && mountain::initAni)
 	{
@@ -334,16 +347,22 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	}
 	else if (key == '+')
 	{
-		if (mainObject->get_speed() < 15.0f)
-			mainObject->set_speed(1.0f);
+		for (int i = 0; i < mountain::cNum; ++i)
+			for (int j = 0; j < mountain::rNum; ++j)
+				if(mountain_list[i][j].get_speed() < 1.0f)
+					mountain_list[i][j].set_speed(0.01f);
 	}
 	else if (key == '-')
 	{
-		if (mainObject->get_speed() > 5.0f)
-			mainObject->set_speed(-1.0f);
+		for (int i = 0; i < mountain::cNum; ++i)
+			for (int j = 0; j < mountain::rNum; ++j)
+				if (mountain_list[i][j].get_speed() > 0.0f)
+					mountain_list[i][j].set_speed(-0.01f);
+				
 	}
 	else if (key == 's' && STATE::makeMaze)
 	{
+
 		mainObject->reveal();
 	}
 	else if (key == '3')
@@ -360,7 +379,7 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 		mountainMaze.ResetMaze();
 		mountain_list.clear();
 		mapFloor.reset();
-
+		std::cout << std::endl;
 		std::cout << "가로입력(5~25):";
 		std::cin >> mountain::rNum;
 		std::cout << "세로입력(5~25):";
@@ -374,6 +393,19 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 		mountainMaze.initialize((mountain::rNum + 1) / 2, (mountain::cNum + 1) / 2);
 		while (!maze::completeGenerate)
 			mountainMaze.generator();
+
+		std::cout << "o/p: 직각투영/원근투영" << std::endl;
+		std::cout << "z/Z: 원근투영시 3인칭 카메라 z축이동" << std::endl;
+		std::cout << "m/M: 육면체 움직임/멈춘다" << std::endl;
+		std::cout << "y/Y: 3인칭 바깥 카메라가 y축 기준으로 회전" << std::endl;
+		std::cout << "r: 미로가 생성된다." << std::endl;
+		std::cout << "v: 육면체가 움직인다/ 움직임을 멈추고 일정높이만큼 낮아진다" << std::endl;
+		std::cout << "s: 객체가 나타난다" << std::endl;
+		std::cout << "방향키: 객체가 이동한다" << std::endl;
+		std::cout << "+/-: 육면체의 움직이는 속도 증가/감소" << std::endl;
+		std::cout << "1/3: 1인칭/3인칭" << std::endl;
+		std::cout << "c: 모든값 초기화" << std::endl;
+		std::cout << "q: 종료" << std::endl;
 
 		mountain::length = mapFloor.get_length();
 		mountain::width = mapFloor.get_width();
@@ -400,7 +432,7 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 		mountain::initAni = false;
 
 		camera = glm::mat4(1.0f);
-		camera_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
+		camera_eye = glm::vec3(700.0f, 800.0f, 700.0f);
 		camera_look = glm::vec3(0.0f, 0.0f, 0.0f);
 
 		cameraAngle = 0.0f;
@@ -408,11 +440,11 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 		topViewCamera = glm::mat4(1.0f);
 		tVCamra_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
 
-		camera = glm::lookAt(camera_eye, camera_look, glm::vec3(-1.0f, 1.0f, -1.0f));
+		camera = glm::lookAt(camera_eye, camera_look, glm::vec3(0.0f, 1.0f, 0.0f));
 		topViewCamera = glm::lookAt(tVCamra_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 
 		projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(90.0f), 1.0f, 50.0f, 2000.0f);
+		projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 3000.0f);
 
 	}
 }

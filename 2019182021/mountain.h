@@ -2,6 +2,7 @@
 #include "make_Shader.h"
 #include "cuboid.h"
 #include "my_maze.h"
+//#include "move_obj.h"
 
 class mountain
 {
@@ -71,6 +72,12 @@ public:
 		glEnableVertexAttribArray(0);
 	}
 
+	GLvoid set_speed(const GLfloat& i_speed) { speed += i_speed; }
+
+	GLint get_index_r() const { return index_r; }
+	GLint get_index_c() const { return index_c; }
+	GLfloat get_speed() const { return speed; }
+
 	GLvoid draw(unsigned int& modelLocation);
 	GLvoid drawMaze(unsigned int& modelLocation);
 	GLvoid init_animation();
@@ -123,20 +130,20 @@ GLvoid mountain::animation()
 	if (state_up)
 	{
 		now_height += speed;
-		if (now_height >= 1.0f)
-		{
-			now_height = 1.0f;
-			state_up = false;
-		}
+if (now_height >= 1.0f)
+{
+	now_height = 1.0f;
+	state_up = false;
+}
 	}
-	else if(!state_up)
+	else if (!state_up)
 	{
-		now_height -= speed;
-		if (now_height <= 0.0f)
-		{
-			now_height = 0.0f;
-			state_up = true;
-		}
+	now_height -= speed;
+	if (now_height <= 0.0f)
+	{
+		now_height = 0.0f;
+		state_up = true;
+	}
 	}
 	transformation = glm::mat4(1.0f);
 	transformation = glm::translate(transformation,
@@ -160,17 +167,17 @@ GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mo
 	for (int i = 0; i < (mountain::cNum + 1) / 2; ++i)
 	{
 		for (int j = 0; j < (mountain::rNum + 1) / 2; ++j)
-		{			
+		{
 			//0 top  1 right  2 bottom  3 left
-			if(!completeMaze.Maze[i][j].wallOpen[0])
+			if (!completeMaze.Maze[i][j].wallOpen[0])
 				mountainList[i * 2 - 1][j * 2].maze_state = true;
-			
+
 			if (!completeMaze.Maze[i][j].wallOpen[1])
 				mountainList[i * 2][j * 2 + 1].maze_state = true;
-			
+
 			if (!completeMaze.Maze[i][j].wallOpen[2])
 				mountainList[i * 2 + 1][j * 2].maze_state = true;
-			
+
 			if (!completeMaze.Maze[i][j].wallOpen[3])
 				mountainList[i * 2][j * 2 - 1].maze_state = true;
 		}
@@ -178,7 +185,7 @@ GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mo
 
 	//마지막 탈출방
 	mountainList[mountain::cNum - 1][mountain::rNum - 1].maze_state = true;
-	
+
 	if (mountain::cNum % 2 == 0 && mountain::rNum % 2 == 0)
 	{
 		std::uniform_int_distribution<int> dis(0, 1);
@@ -188,7 +195,7 @@ GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mo
 		else
 			mountainList[mountain::cNum - 1][mountain::rNum - 2].maze_state = true;
 	}
-	
+
 	if (mountain::cNum % 2 == 0)
 	{
 		std::uniform_int_distribution<int> dis(1, mountain::rNum - 4);
@@ -196,7 +203,7 @@ GLvoid set_maze(const maze& completeMaze, std::vector<std::vector<mountain>>& mo
 		for (int i = 0; i < random_loop; ++i)
 			mountainList[mountain::cNum - 1][dis(gen)].maze_state = true;
 	}
-	
+
 	if (mountain::rNum % 2 == 0)
 	{
 		std::uniform_int_distribution<int> dis(1, mountain::cNum - 4);
@@ -217,3 +224,4 @@ GLvoid mountain::set_height()
 		transformation = glm::scale(transformation, glm::vec3(1.0f, 0.2f, 1.0f));
 	}
 }
+

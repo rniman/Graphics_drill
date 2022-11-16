@@ -239,7 +239,7 @@ void maze::generator()
 	}
 	else
 	{
-		std::cout << visitedCellCount<< " 미로 완성" << std::endl;
+		//std::cout << visitedCellCount<< " 미로 완성" << std::endl;
 		maze::completeGenerate = true;
 	}
 
