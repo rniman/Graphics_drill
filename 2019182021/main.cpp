@@ -31,11 +31,12 @@ GLfloat tv_rColor = 1.0f, tv_gColor = 1.0f, tv_bColor = 1.0f;
 
 namespace STATE
 {
-	GLboolean perspective = true;;
+	GLboolean perspective = true;
 	GLboolean mountain_animation = false;
 	GLboolean makeMaze = false;
 	GLboolean dir[4] = { false, false, false, false };
 	GLboolean quarter_view = true;
+	GLboolean minimap_perspective = false;
 }
 
 
@@ -53,6 +54,7 @@ glm::mat4 topViewCamera;
 glm::vec3 tVCamra_eye = glm::vec3(0.0f, 1000.0f, 0.0f);
 
 glm::mat4 projection;
+glm::mat4 mini_projection;
 glm::mat4 view;
 
 GLuint vao;
@@ -95,6 +97,7 @@ int main(int argc, char** argv)
 		mountainMaze.generator();
 
 	std::cout << "o/p: 직각투영/원근투영" << std::endl;
+	std::cout << "l: 미니맵 직각투영 on/off" << std::endl;
 	std::cout << "z/Z: 원근투영시 3인칭 카메라 z축이동" << std::endl;
 	std::cout << "m/M: 육면체 움직임/멈춘다" << std::endl;
 	std::cout << "y/Y: 3인칭 바깥 카메라가 y축 기준으로 회전" << std::endl;
@@ -143,13 +146,15 @@ int main(int argc, char** argv)
 	viewLocation = glGetUniformLocation(shaderID, "viewTransform");
 	projLocation = glGetUniformLocation(shaderID, "projectionTransform");
 
+
 	camera = glm::lookAt(camera_eye, camera_look, glm::vec3(0.0f, 1.0f, 0.0f));
 	topViewCamera = glm::lookAt(tVCamra_eye, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 	
 	projection = glm::mat4(1.0f);
 	//근평면은 포함이고 원평면은 포함X
 	projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 3000.0f);
-
+	mini_projection = glm::mat4(1.0f);
+	mini_projection = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, 50.0f, 3000.0f);
 
 	glutMainLoop();
 }
@@ -211,6 +216,10 @@ GLvoid drawScene()
 
 	glViewport(800, 500, 200, 200);
 	glDisable(GL_DEPTH_TEST);
+
+	glUniformMatrix4fv(projLocation, 1, GL_FALSE, glm::value_ptr(projection));
+	if(STATE::minimap_perspective)
+		glUniformMatrix4fv(projLocation, 1, GL_FALSE, glm::value_ptr(mini_projection));
 
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(topViewCamera));
 
@@ -373,6 +382,10 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 	{
 		STATE::quarter_view = false;
 	}
+	else if (key == 'l')
+	{
+		STATE::minimap_perspective = STATE::minimap_perspective ? false : true;
+	}
 	else if (key == 'c')
 	{
 		delete mainObject;
@@ -395,6 +408,7 @@ GLvoid KeyEvent(unsigned char key, int x, int y)
 			mountainMaze.generator();
 
 		std::cout << "o/p: 직각투영/원근투영" << std::endl;
+		std::cout << "l: 미니맵 직각투영 on/off" << std::endl;
 		std::cout << "z/Z: 원근투영시 3인칭 카메라 z축이동" << std::endl;
 		std::cout << "m/M: 육면체 움직임/멈춘다" << std::endl;
 		std::cout << "y/Y: 3인칭 바깥 카메라가 y축 기준으로 회전" << std::endl;
